@@ -33,7 +33,7 @@ export function DatePicker({ value, onChange, placeholder = "Pick a date", disab
         <Calendar
           mode="single"
           selected={selected}
-          onSelect={(d) => {
+          onSelect={(d: Date | undefined) => {
             onChange?.(d);
             setOpen(false);
           }}
