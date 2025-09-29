@@ -31,8 +31,9 @@ export function EventForm({ onSubmit, defaultValues, submitting }: EventFormProp
         <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Input id="description" value={description} onChange={e => setDescription(e.target.value)} />
+        <Label htmlFor="description">Description <span className="text-muted-foreground text-xs font-normal" aria-hidden="true">(optional)</span></Label>
+        <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Short summary" aria-describedby="description-help" />
+        <p id="description-help" className="text-xs text-muted-foreground">You can add details later.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -46,7 +47,7 @@ export function EventForm({ onSubmit, defaultValues, submitting }: EventFormProp
       </div>
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>
-        <Input id="category" value={category} onChange={e => setCategory(e.target.value)} />
+        <Input id="category" value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g. Webinar" />
       </div>
       <div className="pt-2">
         <Button type="submit" disabled={submitting}>{submitting ? "Saving..." : "Create Event"}</Button>

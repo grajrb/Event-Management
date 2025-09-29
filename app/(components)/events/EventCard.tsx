@@ -36,8 +36,23 @@ export function EventCard({ event, onSelect, onDelete }: EventCardProps) {
         </div>
       </CardContent>
       <CardFooter className="mt-auto flex items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => onSelect?.(event.id)}>View</Button>
-        <Button size="sm" variant="ghost" onClick={() => onDelete?.(event.id)} className="text-destructive hover:text-destructive">Delete</Button>
+        <Button
+          size="sm"
+            variant="outline"
+            aria-label={`View event ${event.title}`}
+            onClick={() => onSelect?.(event.id)}
+          >
+            View
+          </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-label={`Delete event ${event.title}`}
+          onClick={() => onDelete?.(event.id)}
+          className="text-destructive hover:text-destructive"
+        >
+          Delete
+        </Button>
       </CardFooter>
     </Card>
   );

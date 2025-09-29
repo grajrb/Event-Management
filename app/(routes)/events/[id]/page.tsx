@@ -1,43 +1,10 @@
-import * as React from "react";
-import type { Event } from "@/lib/types";
 import { notFound } from "next/navigation";
 import { seedEvents } from "@/lib/mock";
-import { AttendeeList } from "@/app/(components)/attendees/AttendeeList";
-import { AddAttendeeForm } from "@/app/(components)/attendees/AddAttendeeForm";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { EventDetailClient } from "./EventDetailClient";
 
-export default function EventDetail({ params }: { params: { id: string } }) {
-  const all = React.useMemo(() => seedEvents(), []);
-  const event: Event | undefined = all.find(e => e.id === params.id);
-  const [attendees, setAttendees] = React.useState(event?.attendees ?? []);
-
+export default async function EventDetail({ params }: { params: { id: string } }) {
+  const all = seedEvents();
+  const event = all.find(e => e.id === params.id);
   if (!event) return notFound();
-
-  function addAttendee(name: string) {
-    setAttendees(prev => [...prev, { id: crypto.randomUUID(), name }]);
-  }
-  function removeAttendee(id: string) {
-    setAttendees(prev => prev.filter(a => a.id !== id));
-  }
-
-  return (
-    <main className="mx-auto max-w-3xl p-6 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">{event.title}</h1>
-        <p className="text-sm text-muted-foreground">
-          {format(new Date(event.date), "PPpp")} • {event.location} • {event.category}
-        </p>
-      </div>
-      {event.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{event.description}</p>}
-      <section className="space-y-4">
-        <h2 className="text-lg font-medium">Attendees ({attendees.length})</h2>
-        <AddAttendeeForm onAdd={addAttendee} />
-        <AttendeeList attendees={attendees} onRemove={removeAttendee} />
-      </section>
-      <div>
-        <Button variant="outline" onClick={() => history.back()}>Back</Button>
-      </div>
-    </main>
-  );
+  return <EventDetailClient event={event} />;
 }
