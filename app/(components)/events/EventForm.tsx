@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateTimeRangePicker } from "@/components/ui/date-time-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import type { EventDraft } from "@/lib/types";
 
@@ -19,7 +19,12 @@ const schema = z.object({
   description: z.string().optional(),
   location: z.string().optional(),
   category: z.string().min(2, "Select a category"),
-  date: z.date().optional(),
+  start: z.date({ required_error: "Start required" }),
+  end: z.date({ required_error: "End required" }),
+  maxCapacity: z.number().int().positive().optional(),
+}).refine(d => !d.start || !d.end || d.end >= d.start, {
+  message: "End must be after start",
+  path: ["end"],
 });
 
 export function EventForm({ onSubmit, defaultValues, submitting }: EventFormProps) {
@@ -27,13 +32,15 @@ export function EventForm({ onSubmit, defaultValues, submitting }: EventFormProp
   const [description, setDescription] = React.useState(defaultValues?.description ?? "");
   const [location, setLocation] = React.useState(defaultValues?.location ?? "");
   const [category, setCategory] = React.useState(defaultValues?.category ?? "General");
-  const [date, setDate] = React.useState<Date | undefined>(defaultValues?.date ?? undefined);
+  const [start, setStart] = React.useState<Date | undefined>(defaultValues?.start ?? undefined);
+  const [end, setEnd] = React.useState<Date | undefined>(defaultValues?.end ?? undefined);
+  const [maxCapacity, setMaxCapacity] = React.useState<number | undefined>(defaultValues?.maxCapacity);
 
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = schema.safeParse({ title, description, location, category, date });
+  const parsed = schema.safeParse({ title, description, location, category, start, end, maxCapacity });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -43,7 +50,7 @@ export function EventForm({ onSubmit, defaultValues, submitting }: EventFormProp
       return;
     }
     setErrors({});
-    onSubmit({ title, description, location, category, date });
+  onSubmit({ title, description, location, category, start, end, maxCapacity });
   }
 
   return (
@@ -65,9 +72,29 @@ export function EventForm({ onSubmit, defaultValues, submitting }: EventFormProp
           {errors.location && <p id="location-error" className="text-xs text-destructive mt-1">{errors.location}</p>}
         </div>
         <div className="space-y-2">
-          <Label>Date & Time</Label>
-          <DatePicker value={date} onChange={setDate} />
+          <Label>Date & Time Range</Label>
+          <DateTimeRangePicker
+            start={start}
+            end={end}
+            onChange={({ start: s, end: e }) => { setStart(s); setEnd(e); }}
+          />
+          {(errors.start || errors.end) && <p className="text-xs text-destructive mt-1">{errors.start || errors.end}</p>}
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="maxCapacity">Max Capacity <span className="text-muted-foreground text-xs" aria-hidden="true">(optional)</span></Label>
+        <Input
+          id="maxCapacity"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          value={maxCapacity ?? ''}
+          onChange={e => setMaxCapacity(e.target.value ? Number(e.target.value) : undefined)}
+          aria-invalid={!!errors.maxCapacity}
+          aria-describedby={errors.maxCapacity ? 'capacity-error' : undefined}
+          placeholder="e.g. 100"
+        />
+        {errors.maxCapacity && <p id="capacity-error" className="text-xs text-destructive mt-1">{errors.maxCapacity}</p>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>

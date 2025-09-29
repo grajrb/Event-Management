@@ -18,7 +18,14 @@ export function EventCard({ event, onSelect, onDelete }: EventCardProps) {
         <CardTitle className="flex items-center justify-between gap-2">
           <span className="truncate" title={event.title}>{event.title}</span>
           <span className="text-xs font-normal text-muted-foreground">
-            {format(new Date(event.date), "PPp")}
+            {(() => {
+              const start = event.start ? new Date(event.start) : (event.date ? new Date(event.date) : new Date());
+              const end = event.end ? new Date(event.end) : new Date(start.getTime() + 60 * 60 * 1000);
+              const sameDay = start.toDateString() === end.toDateString();
+              return sameDay
+                ? `${format(start, 'PP p')} – ${format(end, 'p')}`
+                : `${format(start, 'PP p')} → ${format(end, 'PP p')}`;
+            })()}
           </span>
         </CardTitle>
         {event.description && (
@@ -32,7 +39,9 @@ export function EventCard({ event, onSelect, onDelete }: EventCardProps) {
           <span>{event.category}</span>
         </div>
         <div className="text-xs text-muted-foreground">
-          {event.attendees.length} attendee{event.attendees.length === 1 ? "" : "s"}
+          {typeof event.maxCapacity === 'number'
+            ? `${event.attendees.length}/${event.maxCapacity} attendee${event.attendees.length === 1 ? '' : 's'}`
+            : `${event.attendees.length} attendee${event.attendees.length === 1 ? '' : 's'}`}
         </div>
       </CardContent>
       <CardFooter className="mt-auto flex items-center gap-2">

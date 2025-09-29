@@ -8,8 +8,12 @@ export interface Event {
   title: string;
   description: string;
   location: string;
-  date: Date | string; // allow string for serialized data
+  // New: start/end times; keep legacy date for backward compatibility/migration
+  start: string; // ISO string
+  end: string;   // ISO string
+  date?: Date | string; // deprecated
   category: string;
+  maxCapacity?: number;
   attendees: Attendee[];
   createdAt: string;
   updatedAt: string;
@@ -19,6 +23,9 @@ export interface EventDraft {
   title?: string;
   description?: string;
   location?: string;
-  date?: Date;
+  start?: Date; // start date-time
+  end?: Date;   // end date-time
+  date?: Date;  // legacy single date
   category?: string;
+  maxCapacity?: number;
 }
