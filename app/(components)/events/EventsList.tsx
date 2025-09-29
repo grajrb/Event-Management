@@ -4,6 +4,7 @@ import * as React from "react";
 import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import Link from "next/link";
 import type { Event } from "@/lib/types";
 
 interface EventsListProps {
@@ -43,7 +44,11 @@ export function EventsList({ events, onSelect, onDelete, emptyState }: EventsLis
               <TableCell className="hidden lg:table-cell">{evt.category}</TableCell>
               <TableCell className="text-center">{evt.attendees.length}</TableCell>
               <TableCell className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => onSelect?.(evt.id)}>View</Button>
+                <Link href={`/events/${evt.id}`} passHref legacyBehavior>
+                  <Button asChild size="sm" variant="outline">
+                    <span>View</span>
+                  </Button>
+                </Link>
                 <Button size="sm" variant="ghost" className="text-destructive" onClick={() => onDelete?.(evt.id)}>Del</Button>
               </TableCell>
             </TableRow>

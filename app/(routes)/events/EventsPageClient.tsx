@@ -3,6 +3,7 @@ import * as React from "react";
 import { EventsList } from "@/app/(components)/events/EventsList";
 import { EventForm } from "@/app/(components)/events/EventForm";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Event, EventDraft } from "@/lib/types";
 import { makeId } from "@/lib/utils";
 
@@ -12,7 +13,33 @@ interface EventsPageClientProps {
 
 export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
   const [events, setEvents] = React.useState<Event[]>(initialEvents);
-  const [showForm, setShowForm] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+
+  // Hydrate from localStorage once on mount
+  React.useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem('events-data:v1') : null;
+      if (raw) {
+        const parsed: Event[] = JSON.parse(raw).map((e: any) => ({ ...e, date: e.date }));
+        if (Array.isArray(parsed) && parsed.length) {
+          setEvents(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load events from storage', e);
+    }
+  }, []);
+
+  // Persist when events change
+  React.useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('events-data:v1', JSON.stringify(events));
+      }
+    } catch (e) {
+      console.warn('Failed to persist events', e);
+    }
+  }, [events]);
 
   function addEvent(draft: EventDraft) {
     const newEvent: Event = {
@@ -27,7 +54,7 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
       updatedAt: new Date().toISOString(),
     };
     setEvents(prev => [newEvent, ...prev]);
-    setShowForm(false);
+    setOpen(false);
   }
 
   function deleteEvent(id: string) {
@@ -38,16 +65,19 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
     <main className="mx-auto max-w-6xl p-6 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Events</h1>
-        <Button onClick={() => setShowForm(s => !s)} variant={showForm ? "outline" : "default"}>
-          {showForm ? "Cancel" : "New Event"}
-        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button>New Event</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Event</DialogTitle>
+              <DialogDescription>Fill in details and save to add your event.</DialogDescription>
+            </DialogHeader>
+            <EventForm onSubmit={addEvent} />
+          </DialogContent>
+        </Dialog>
       </div>
-      {showForm && (
-        <div className="rounded-lg border p-6">
-          <h2 className="text-lg font-medium mb-4">Create Event</h2>
-          <EventForm onSubmit={addEvent} />
-        </div>
-      )}
       <EventsList events={events} onSelect={() => {}} onDelete={deleteEvent} />
     </main>
   );
