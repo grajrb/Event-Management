@@ -14,12 +14,59 @@ class EventController extends Controller
 {
     public function __construct(private EventService $service) {}
 
+    /**
+     * @OA\Post(
+     *   path="/api/events",
+     *   summary="Create an event",
+     *   tags={"Events"},
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(required={"name","start_time","end_time"},
+     *       @OA\Property(property="name", type="string", example="Tech Meetup"),
+     *       @OA\Property(property="location", type="string", example="Online"),
+     *       @OA\Property(property="start_time", type="string", format="date-time", example="2025-10-01 18:00:00"),
+     *       @OA\Property(property="end_time", type="string", format="date-time", example="2025-10-01 19:00:00"),
+     *       @OA\Property(property="max_capacity", type="integer", example=100),
+     *       @OA\Property(property="timezone", type="string", example="Asia/Kolkata")
+     *     )
+     *   ),
+     *   @OA\Response(
+     *     response=201,
+     *     description="Created",
+     *     @OA\JsonContent(ref="#/components/schemas/Event")
+     *   ),
+     *   @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function store(StoreEventRequest $request): JsonResponse
     {
         $event = $this->service->create($request->validated());
         return response()->json($this->transformEvent($event), 201);
     }
 
+    /**
+     * @OA\Get(
+     *   path="/api/events",
+     *   summary="List upcoming events",
+     *   tags={"Events"},
+     *   @OA\Parameter(name="page", in="query", required=false, @OA\Schema(type="integer", minimum=1)),
+     *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", minimum=1, maximum=100)),
+     *   @OA\Parameter(name="tz", in="query", required=false, description="Timezone identifier for localized fields", @OA\Schema(type="string")),
+     *   @OA\Response(
+     *     response=200,
+     *     description="OK",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Event")),
+     *       @OA\Property(property="meta", type="object",
+     *         @OA\Property(property="page", type="integer"),
+     *         @OA\Property(property="per_page", type="integer"),
+     *         @OA\Property(property="total", type="integer"),
+     *         @OA\Property(property="total_pages", type="integer")
+     *       )
+     *     )
+     *   )
+     * )
+     */
     public function index(Request $request): JsonResponse
     {
         $page = (int) $request->query('page', 1);
@@ -37,6 +84,23 @@ class EventController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *   path="/api/events/{event}/register",
+     *   summary="Register attendee for event",
+     *   tags={"Attendees"},
+     *   @OA\Parameter(name="event", in="path", required=true, @OA\Schema(type="integer")),
+     *   @OA\RequestBody(required=true, @OA\JsonContent(required={"name","email"},
+     *     @OA\Property(property="name", type="string", example="Jane Doe"),
+     *     @OA\Property(property="email", type="string", format="email", example="jane@example.com")
+     *   )),
+     *   @OA\Response(response=201, description="Created", @OA\JsonContent(ref="#/components/schemas/Attendee")),
+     *   @OA\Response(response=404, description="Event not found"),
+     *   @OA\Response(response=409, description="Duplicate or capacity full",
+     *     @OA\JsonContent(@OA\Property(property="error", type="string", example="capacity_full"))
+     *   )
+     * )
+     */
     public function register(RegisterAttendeeRequest $request, Event $event): JsonResponse
     {
         try {
@@ -54,6 +118,28 @@ class EventController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *   path="/api/events/{event}/attendees",
+     *   summary="List attendees for event",
+     *   tags={"Attendees"},
+     *   @OA\Parameter(name="event", in="path", required=true, @OA\Schema(type="integer")),
+     *   @OA\Parameter(name="page", in="query", required=false, @OA\Schema(type="integer", minimum=1)),
+     *   @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", minimum=1, maximum=100)),
+     *   @OA\Response(response=200, description="OK",
+     *     @OA\JsonContent(
+     *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Attendee")),
+     *       @OA\Property(property="meta", type="object",
+     *         @OA\Property(property="page", type="integer"),
+     *         @OA\Property(property="per_page", type="integer"),
+     *         @OA\Property(property="total", type="integer"),
+     *         @OA\Property(property="total_pages", type="integer")
+     *       )
+     *     )
+     *   ),
+     *   @OA\Response(response=404, description="Event not found")
+     * )
+     */
     public function attendees(Request $request, Event $event): JsonResponse
     {
         $page = (int) $request->query('page', 1);
@@ -97,3 +183,29 @@ class EventController extends Controller
         return $out;
     }
 }
+
+/**
+ * @OA\Schema(
+ *   schema="Event",
+ *   @OA\Property(property="id", type="integer", example=1),
+ *   @OA\Property(property="name", type="string", example="Tech Meetup"),
+ *   @OA\Property(property="location", type="string", example="Online"),
+ *   @OA\Property(property="start_time_utc", type="string", format="date-time"),
+ *   @OA\Property(property="end_time_utc", type="string", format="date-time"),
+ *   @OA\Property(property="max_capacity", type="integer", nullable=true, example=150),
+ *   @OA\Property(property="remaining_capacity", type="integer", nullable=true, example=120),
+ *   @OA\Property(property="created_at", type="string", format="date-time"),
+ *   @OA\Property(property="updated_at", type="string", format="date-time"),
+ *   @OA\Property(property="start_time_local", type="string", format="date-time", nullable=true),
+ *   @OA\Property(property="end_time_local", type="string", format="date-time", nullable=true)
+ * )
+ *
+ * @OA\Schema(
+ *   schema="Attendee",
+ *   @OA\Property(property="id", type="integer", example=10),
+ *   @OA\Property(property="event_id", type="integer", example=1),
+ *   @OA\Property(property="name", type="string", example="Jane Doe"),
+ *   @OA\Property(property="email", type="string", format="email", example="jane@example.com"),
+ *   @OA\Property(property="registered_at", type="string", format="date-time")
+ * )
+ */

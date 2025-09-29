@@ -5,8 +5,8 @@ import { EventForm } from "@/app/(components)/events/EventForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import type { Event, EventDraft } from "@/lib/types";
-import { makeId } from "@/lib/utils";
 import { addHours } from "date-fns";
+import { fetchEvents as apiFetchEvents, createEvent as apiCreateEvent } from "@/lib/api";
 
 interface EventsPageClientProps {
   initialEvents: Event[];
@@ -16,44 +16,53 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
   const [events, setEvents] = React.useState<Event[]>(initialEvents);
   const [open, setOpen] = React.useState(false);
 
-  // Hydrate from localStorage once on mount
+  // Hydrate: attempt backend fetch, fallback to localStorage legacy data
   React.useEffect(() => {
-    try {
-      const raw = typeof window !== 'undefined' ? window.localStorage.getItem('events-data:v1') : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          const migrated: Event[] = parsed.map((e: any) => {
-            // Migration: if start/end missing, derive from legacy date
-            let startIso = e.start;
-            let endIso = e.end;
-            if (!startIso || !endIso) {
-              const legacyDate = e.date ? new Date(e.date) : new Date();
-              const end = addHours(legacyDate, 1);
-              startIso = legacyDate.toISOString();
-              endIso = end.toISOString();
-            }
-            return {
-              id: e.id || makeId(),
-              title: e.title || "Untitled",
-              description: e.description || "",
-              location: e.location || "Online",
-              start: startIso,
-              end: endIso,
-              date: e.date, // keep legacy field if present
-              category: e.category || "General",
-              maxCapacity: typeof e.maxCapacity === 'number' ? e.maxCapacity : undefined,
-              attendees: Array.isArray(e.attendees) ? e.attendees : [],
-              createdAt: e.createdAt || new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            } as Event;
-          });
-          setEvents(migrated);
-        }
+    let cancelled = false;
+    (async () => {
+      const backend = await apiFetchEvents();
+      if (!cancelled && backend.length) {
+        setEvents(backend);
+        return;
       }
-    } catch (e) {
-      console.warn('Failed to load events from storage', e);
-    }
+      // fallback legacy logic
+      try {
+        const raw = typeof window !== 'undefined' ? window.localStorage.getItem('events-data:v1') : null;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const migrated: Event[] = parsed.map((e: any) => {
+              let startIso = e.start;
+              let endIso = e.end;
+              if (!startIso || !endIso) {
+                const legacyDate = e.date ? new Date(e.date) : new Date();
+                const end = addHours(legacyDate, 1);
+                startIso = legacyDate.toISOString();
+                endIso = end.toISOString();
+              }
+              return {
+                id: e.id || crypto.randomUUID(),
+                title: e.title || "Untitled",
+                description: e.description || "",
+                location: e.location || "Online",
+                start: startIso,
+                end: endIso,
+                date: e.date,
+                category: e.category || "General",
+                maxCapacity: typeof e.maxCapacity === 'number' ? e.maxCapacity : undefined,
+                attendees: Array.isArray(e.attendees) ? e.attendees : [],
+                createdAt: e.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              } as Event;
+            });
+            if (!cancelled) setEvents(migrated);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load events fallback', e);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Persist when events change
@@ -67,26 +76,33 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
     }
   }, [events]);
 
-  function addEvent(draft: EventDraft) {
+  async function addEvent(draft: EventDraft) {
+    // Try backend first
+    const created = await apiCreateEvent(draft);
+    if (created) {
+      setEvents(prev => [created, ...prev]);
+      setOpen(false);
+      return;
+    }
+    // fallback local create
     const now = new Date();
     const startDate = draft.start ?? draft.date ?? now;
     const endDate = draft.end && draft.start ? draft.end : addHours(startDate, 1);
-
-    const newEvent: Event = {
-      id: makeId(),
-      title: draft.title ?? "Untitled",
-      description: draft.description ?? "",
-      location: draft.location ?? "Online",
+    const local: Event = {
+      id: crypto.randomUUID(),
+      title: draft.title ?? 'Untitled',
+      description: draft.description ?? '',
+      location: draft.location ?? 'Online',
       start: startDate.toISOString(),
       end: endDate.toISOString(),
-      date: startDate, // keep legacy for now
-      category: draft.category ?? "General",
+      date: startDate,
+      category: draft.category ?? 'General',
       maxCapacity: draft.maxCapacity,
       attendees: [],
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
-    setEvents(prev => [newEvent, ...prev]);
+    setEvents(prev => [local, ...prev]);
     setOpen(false);
   }
 
