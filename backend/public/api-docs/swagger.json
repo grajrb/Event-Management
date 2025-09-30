@@ -1,0 +1,31 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Event Management API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/events": {
+      "get": {
+        "summary": "List events",
+        "parameters": [
+          {"name": "page", "in": "query", "schema": {"type": "integer"}},
+          {"name": "per_page", "in": "query", "schema": {"type": "integer"}},
+          {"name": "tz", "in": "query", "schema": {"type": "string"}}
+        ],
+        "responses": {"200": {"description": "OK"}}
+      },
+      "post": {
+        "summary": "Create event",
+        "requestBody": {"required": true},
+        "responses": {"201": {"description": "Created"}}
+      }
+    },
+    "/events/{id}/register": {
+      "post": {"summary": "Register attendee", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "responses": {"201": {"description": "Created"}, "409": {"description": "Duplicate/Full"}}}
+    },
+    "/events/{id}/attendees": {
+      "get": {"summary": "List attendees", "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}], "responses": {"200": {"description": "OK"}}}
+    }
+  }
+}
