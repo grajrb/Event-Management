@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { seedEvents } from "@/lib/mock";
 import { EventDetailClient } from "./EventDetailClient";
+import { fetchEvent } from "@/lib/api";
 
 export default async function EventDetail({ params }: { params: { id: string } }) {
-  const all = seedEvents();
-  const event = all.find(e => e.id === params.id);
+  // Attempt to fetch from backend; if fails, we can't statically seed here (could add fallback if needed)
+  const event = await fetchEvent(params.id);
   if (!event) return notFound();
   return <EventDetailClient event={event} />;
 }

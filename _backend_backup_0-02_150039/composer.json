@@ -1,0 +1,8 @@
+{
+  "name": "assignment/event-backend",
+  "type": "project",
+  "description": "Laravel backend scaffold placeholder. Run 'composer create-project laravel/laravel .' then merge provided app code.",
+  "require": {
+    "php": ">=8.2"
+  }
+}

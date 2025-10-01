@@ -8,6 +8,17 @@ import type { Event, EventDraft } from "@/lib/types";
 import { addHours } from "date-fns";
 import { fetchEvents as apiFetchEvents, createEvent as apiCreateEvent } from "@/lib/api";
 
+// Simple curated timezone options (common examples). Backend expects IANA names.
+const TIMEZONE_OPTIONS = [
+  'UTC',
+  'Asia/Kolkata',
+  'America/New_York',
+  'Europe/London',
+  'Europe/Berlin',
+  'Asia/Singapore',
+  'Australia/Sydney'
+];
+
 interface EventsPageClientProps {
   initialEvents: Event[];
 }
@@ -15,12 +26,14 @@ interface EventsPageClientProps {
 export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
   const [events, setEvents] = React.useState<Event[]>(initialEvents);
   const [open, setOpen] = React.useState(false);
+  const [timezone, setTimezone] = React.useState<string>('Asia/Kolkata');
+  const tzRef = React.useRef(timezone);
 
   // Hydrate: attempt backend fetch, fallback to localStorage legacy data
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
-      const backend = await apiFetchEvents();
+      const backend = await apiFetchEvents(tzRef.current);
       if (!cancelled && backend.length) {
         setEvents(backend);
         return;
@@ -63,7 +76,20 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, []); // initial hydration only
+
+  // Refetch when timezone changes
+  React.useEffect(() => {
+    let cancelled = false;
+    tzRef.current = timezone;
+    (async () => {
+      const backend = await apiFetchEvents(timezone);
+      if (!cancelled && backend.length) {
+        setEvents(backend);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [timezone]);
 
   // Persist when events change
   React.useEffect(() => {
@@ -78,7 +104,7 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
 
   async function addEvent(draft: EventDraft) {
     // Try backend first
-    const created = await apiCreateEvent(draft);
+  const created = await apiCreateEvent(draft, timezone);
     if (created) {
       setEvents(prev => [created, ...prev]);
       setOpen(false);
@@ -112,8 +138,23 @@ export function EventsPageClient({ initialEvents }: EventsPageClientProps) {
 
   return (
     <main className="mx-auto max-w-6xl p-6 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Events</h1>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold tracking-tight">Events</h1>
+          <div className="flex items-center gap-2">
+            <label htmlFor="timezone" className="text-sm text-muted-foreground">Timezone</label>
+            <select
+              id="timezone"
+              className="border rounded px-2 py-1 text-sm bg-background"
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+            >
+              {TIMEZONE_OPTIONS.map(tz => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>New Event</Button>

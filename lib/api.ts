@@ -40,6 +40,19 @@ export async function fetchEvents(tz?: string): Promise<Event[]> {
   }
 }
 
+export async function fetchEvent(id: string | number, tz?: string): Promise<Event | null> {
+  try {
+    const url = new URL(BASE + `/events/${id}`);
+    if (tz) url.searchParams.set('tz', tz);
+    const res = await fetch(url.toString(), { cache: 'no-store' });
+    const data = await json<any>(res);
+    return transformEventFromApi(data);
+  } catch (e) {
+    console.warn('fetchEvent failed', e);
+    return null;
+  }
+}
+
 export async function createEvent(draft: EventDraft, tz = 'Asia/Kolkata'): Promise<Event | null> {
   try {
     const payload = {

@@ -220,6 +220,19 @@ php artisan test
 
 The UI currently supports creation and listing of events with graceful fallback to local persistence. Attendee registration UI can be layered by calling `registerAttendee` from `lib/api.ts` and adding a detail view component.
 
+### Timezone Selector
+
+On the events list page a timezone dropdown (default `Asia/Kolkata`) issues refetches using the `tz` query parameter. This instructs the backend (when available) to return localized projections (`start_time_local` / `end_time_local` in future enhancement or adjusted UTC interpretation). When the backend is unreachable the selector only influences newly created events' assumed timezone (passed to the `createEvent` call) while legacy localStorage items remain unchanged.
+
+### Event Detail & Attendees
+
+The event detail page now fetches the event from the backend via `fetchEvent(id)` and renders two attendee subcomponents:
+
+- `AddAttendeeForm`: posts to `/events/{id}/register` and triggers a refresh.
+- `AttendeeList`: paginated attendee fetcher using `/events/{id}/attendees`.
+
+If the backend is offline these lists will appear empty (no local fallback implemented for per-event attendee data). This is intentional to keep local fallback scope limited to event listing/creation.
+
 ## Possible Enhancements
 
 - Edit / delete events & attendee cancellation
